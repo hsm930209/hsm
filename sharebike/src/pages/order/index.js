@@ -3,6 +3,8 @@ import { Card, Button, Table, Form, Select, Modal, message, DatePicker } from 'a
 import axios from './../../axios/index';
 import utils from './../../utils/utils'
 import './../../style/common.less'
+import BaseForm from './../../components/baseForm';
+import ETable from './../../components/Etable';
 const FormItem = Form.Item;
 const Option = Select.Option;
 export default class City extends React.Component {
@@ -13,36 +15,64 @@ export default class City extends React.Component {
     params = {
         page: 1
     }
+    formList = [
+        {
+            type: "SELECT",
+            label: '城市',
+            field: 'city',
+            placeholder: '全部',
+            initialValue: '1',
+            width: 80,
+            list: [{ id: '0', name: '全部' }, { id: '1', name: '北京' }, { id: '2', name: '天津' }, { id: '3', name: '上海' }]
+        },
+        {
+            type: "时间查询",
+        },
+        {
+            type: "SELECT",
+            label: '订单状态',
+            field: 'order_status',
+            placeholder: '全部',
+            initialValue: '1',
+            width: 120,
+            list: [{ id: '0', name: '全部' }, { id: '1', name: '进行中' }, { id: '2', name: '结束行程' }]
+        },
+    ]
+    handleFilter = (params) => {
+        this.params = params;
+        this.requestList();
+    }
     componentDidMount() {
         this.requestList();
     }
     requestList = () => {
         let _this = this;
-        axios.ajax({
-            url: '/order/list',
-            data: {
-                params: {
-                    page: this.params.page
-                }
-            }
-        }).then((res) => {
-            console.log(JSON.stringify(res));
-            if (res.code == 0) {
-                res.result.item_list.map((item, index) => {
-                    item.key = index;
-                    return item;
-                })
-                this.setState({
-                    list: res.result.item_list,
-                    selectedRowKeys: [],
-                    selectedRows: null,
-                    pagination: utils.pagination(res, (current) => {
-                        _this.params.page = current;
-                        this.requestList();
-                    })
-                })
-            }
-        })
+        axios.requestList(this, '/order/list', this.params);
+        // axios.ajax({
+        //     url: '/order/list',
+        //     data: {
+        //         params: {
+        //             page: this.params
+        //         }
+        //     }
+        // }).then((res) => {
+        //     console.log(JSON.stringify(res));
+        //     if (res.code == 0) {
+        //         res.result.item_list.map((item, index) => {
+        //             item.key = index;
+        //             return item;
+        //         })
+        //         this.setState({
+        //             list: res.result.item_list,
+        //             selectedRowKeys: [],
+        //             selectedRows: null,
+        //             pagination: utils.pagination(res, (current) => {
+        //                 _this.params.page = current;
+        //                 this.requestList();
+        //             })
+        //         })
+        //     }
+        // })
     }
     handleFinished = () => {
         let item = this.state.selectedItem;
@@ -99,16 +129,7 @@ export default class City extends React.Component {
         })
     }
 
-
-    onRowClick = (record, index) => {
-        let selectKey = [index];
-        this.setState({
-            selectedRowKeys: selectKey,
-            selectedItem: record
-        })
-    }
-
-    openOrderDetail=()=>{
+    openOrderDetail = () => {
         let item = this.state.selectedItem;
         if (!item) {
             Modal.info({
@@ -117,7 +138,7 @@ export default class City extends React.Component {
             })
             return;
         }
-        window.open(`/#/common/order/detail/${item.id}`,'_blank')
+        window.open(`/#/common/order/detail/${item.id}`, '_blank')
     }
     render() {
         const columns = [
@@ -173,22 +194,27 @@ export default class City extends React.Component {
             labelCol: { span: 5 },
             wrapperCol: { span: 19 }
         }
-        const selectedRowKeys = this.state.selectedRowKeys;
-        const rowSelection = {
-            type: 'radio',
-            selectedRowKeys
-        }
         return (
             <div>
                 <Card>
-                    <FilterForm />
+                    <BaseForm formList={this.formList} filterSubmit={this.handleFilter} />
                 </Card>
                 <Card style={{ marginTop: 10 }}>
                     <Button type="primary" onClick={this.openOrderDetail}>订单详情</Button>
                     <Button type="primary" style={{ marginLeft: 10 }} onClick={this.handleConfirm}>结束订单</Button>
                 </Card>
                 <div className="content-wrap">
-                    <Table
+                    <ETable
+                        updateSelectedItem={utils.updateSelectedItem.bind(this)}
+                        columns={columns}
+                        dataSource={this.state.list}
+                        pagination={this.params.pagination}
+                        selectedIds={this.state.selectedIds}
+                        selectedItem={this.state.selectedItem}
+                        selectedRowKeys={this.state.selectedRowKeys}
+                        rowSelection="checkbox"
+                    />
+                    {/* <Table
                         bordered
                         columns={columns}
                         dataSource={this.state.list}
@@ -201,7 +227,7 @@ export default class City extends React.Component {
                                 }
                             };
                         }}
-                    />
+                    /> */}
                 </div>
                 <Modal
                     title="结束订单"
@@ -230,56 +256,5 @@ export default class City extends React.Component {
     }
 }
 
-class FilterForm extends React.Component {
-    render() {
-        const { getFieldDecorator } = this.props.form;
-        return (
-            <Form layout="inline">
-                <FormItem label="城市">
-                    {
-                        getFieldDecorator("city_id")(
-                            <Select placeholder="全部" style={{ width: 100 }}>
-                                <Option value="">全部</Option>
-                                <Option value="1">北京市</Option>
-                                <Option value="2">天津市</Option>
-                                <Option value="3">深圳市</Option>
-                            </Select>
-                        )
-                    }
-                </FormItem>
-                <FormItem label="订单时间">
-                    {
-                        getFieldDecorator("start_time")(
-                            <DatePicker placeholder="开始时间" showTime format="YYYY-MM-DD HH:mm:ss" />
-                        )
-                    }
-                    -
-                    {
-                        getFieldDecorator("end_time")(
-                            <DatePicker placeholder="结束时间" showTime format="YYYY-MM-DD HH:mm:ss" />
-                        )
-                    }
-                </FormItem>
-                <FormItem label="订单状态">
-                    {
-                        getFieldDecorator("order_status")(
-                            <Select placeholder="全部" style={{ width: 130 }}>
-                                <Option value="">全部</Option>
-                                <Option value="1">进行中</Option>
-                                <Option value="2">进行中(临时锁车)</Option>
-                                <Option value="3">结束行程</Option>
-                            </Select>
-                        )
-                    }
-                </FormItem>
-                <FormItem>
-                    <Button type="primary" style={{ margin: "0 24px" }}>查询</Button>
-                    <Button>重置</Button>
-                </FormItem>
-            </Form>
-        )
-    }
-}
 
-FilterForm = Form.create()(FilterForm);
 
