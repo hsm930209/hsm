@@ -1,18 +1,21 @@
 import React from 'react';
 import {NavLink} from 'react-router-dom';
+import {connect} from 'react-redux'
+import {switchMenu} from './../../redux/action/index'
 import { Menu, Icon } from 'antd';
 import MenuConfig from './../../config/menuConfig'
 import './index.less'
 const SubMenu = Menu.SubMenu;
-export default class NavLeft extends React.Component {
+class NavLeft extends React.Component {
     state = {
         currentKey: ''
     }
 
     componentWillMount() {
         const menuTreeNode = this.renderMenu(MenuConfig);
-
+        let currentKey = window.location.hash.replace(/#|\?.*$/g)
         this.setState({
+            currentKey,
             menuTreeNode
         })
     }
@@ -31,20 +34,46 @@ export default class NavLeft extends React.Component {
             </Menu.Item>
         })
     }
+    handleClick = ({ item, key }) => {
+        if (key == this.state.currentKey) {
+            return false;
+        }
+        // 事件派发，自动调用reducer，通过reducer保存到store对象中
+        const { dispatch } = this.props;
+        dispatch(switchMenu(item.props.title));
+
+        this.setState({
+            currentKey: key
+        });
+        // hashHistory.push(key);
+    };
+
+    homeHandleClick = () => {
+        const { dispatch } = this.props;
+        dispatch(switchMenu('首页'));
+        this.setState({
+            currentKey: ""
+        });
+    };
 
     render() {
         return (
             <div>
-                <div className="logo">
-                    <img src="/assets/logo-ant.svg" alt="" />
-                    <h1>Imooc MS</h1>
-                </div>
+                <NavLink to="/home" onClick={this.homeHandleClick}>
+                    <div className="logo">
+                        <img src="/assets/logo-ant.svg" alt=""/>
+                        <h1>Imooc MS</h1>
+                    </div>
+                </NavLink>
                 <Menu
+                    onClick={this.handleClick}
                     theme="dark"
                 >
-                    {this.state.menuTreeNode}
+                    { this.state.menuTreeNode }
                 </Menu>
             </div>
         );
     }
 }
+
+export default connect()(NavLeft)
